@@ -1,0 +1,46 @@
+name: model
+on: [push, workflow_dispatch]
+jobs:
+  model:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Setup python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install Python packages (CPU-only PyTorch)
+        run: |
+          pip install numpy
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Self-check the reference model
+        run: python model/reference.py
+
+      - name: Train
+        run: python model/train.py
+
+      - name: Export (also checks the reference model matches PyTorch on all 256 inputs)
+        run: python model/export.py
+
+      - name: Compare with the committed files
+        run: |
+          if git diff --quiet -- test/test_vectors.json firmware/bnn_weights.h; then
+            echo "The generated files match the committed ones."
+          else
+            echo "::warning::Training produced different files than the ones committed. Run model/train.py and model/export.py and commit the results."
+            git diff -- firmware/bnn_weights.h
+          fi
+
+      - name: Upload the generated files
+        if: success() || failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: model-outputs
+          path: |
+            model/build/model.json
+            firmware/bnn_weights.h
+            test/test_vectors.json

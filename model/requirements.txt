@@ -1,0 +1,6 @@
+# Python packages for the model pipeline (train.py, export.py).
+# On a computer without an NVIDIA GPU, the smaller CPU-only PyTorch is enough:
+#   pip install numpy
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+numpy
+torch
